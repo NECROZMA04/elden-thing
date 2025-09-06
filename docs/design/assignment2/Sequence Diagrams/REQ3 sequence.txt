@@ -1,0 +1,210 @@
+@startuml
+title Requirement 3 Monologue Sequence
+
+participant Farmer
+participant Engine
+participant Sellen
+participant Kale
+participant Guts
+participant GameMap as Map
+participant EntityUtils
+participant ListenAction
+participant Random
+participant AttackAction
+participant WanderBehaviour
+participant DoNothingAction
+
+== Farmer Requests Options ==
+Farmer -> Engine : showOptions()
+activate Engine
+
+Engine -> Sellen : allowableActions(Farmer, dir, Map)
+activate Sellen
+Sellen -> Map : locationOf(this)
+activate Map
+Map --> Sellen : locThis
+deactivate Map
+Sellen -> Map : locationOf(Farmer)
+activate Map
+Map --> Sellen : locFarmer
+deactivate Map
+
+opt Farmer adjacent to Sellen
+    Sellen -> Sellen : getMonologues(Farmer, Map)
+    activate Sellen
+    Sellen --> Sellen : ["The academy…",\n "You sense it…"]
+    deactivate Sellen
+
+    Sellen -> ListenAction : «create» new ListenAction(Farmer, Sellen)
+    activate ListenAction
+    deactivate ListenAction
+end
+Sellen --> Engine : return actionList
+deactivate Sellen
+
+Engine -> Kale : allowableActions(Farmer, dir, Map)
+activate Kale
+Kale -> Map : locationOf(this)
+activate Map
+Map --> Kale : locThis
+deactivate Map
+Kale -> Map : locationOf(Farmer)
+activate Map
+Map --> Kale : locFarmer
+deactivate Map
+
+opt Farmer adjacent to Kale
+    Kale -> Kale : getMonologues(Farmer, Map)
+    activate Kale
+
+    alt Farmer runes < 500
+        Kale --> Kale : add("Ah, hard times…")
+    end
+    alt inventory empty
+        Kale --> Kale : add("Not a scrap…")
+    end
+    opt near cursed ground
+        Kale -> EntityUtils : hasNearbyWithCapability(locThis, INFESTATION)
+        activate EntityUtils
+        EntityUtils --> Kale : true/false
+        deactivate EntityUtils
+        alt true
+            Kale --> Kale : add("Rest by the flame…")
+        end
+    end
+    alt default
+        Kale --> Kale : add("A merchant’s life…")
+    end
+
+    Kale --> Kale : monologueList
+    deactivate Kale
+
+    Kale -> ListenAction : «create» new ListenAction(Farmer, Kale)
+    activate ListenAction
+    deactivate ListenAction
+end
+Kale --> Engine : return actionList
+deactivate Kale
+
+Engine -> Guts : allowableActions(Farmer, dir, Map)
+activate Guts
+Guts -> Map : locationOf(this)
+activate Map
+Map --> Guts : locThis
+deactivate Map
+Guts -> Map : locationOf(Farmer)
+activate Map
+Map --> Guts : locFarmer
+deactivate Map
+
+opt Farmer adjacent to Guts
+    Guts -> Guts : getMonologues(Farmer, Map)
+    activate Guts
+    alt Farmer HP ≤ 50
+        Guts --> Guts : ["WEAK! …"]
+    else
+        Guts --> Guts : ["RAAAAGH!", "I’LL CRUSH …"]
+    end
+    deactivate Guts
+
+    Guts -> ListenAction : «create» new ListenAction(Farmer, Guts)
+    activate ListenAction
+    deactivate ListenAction
+end
+Guts --> Engine : return actionList
+deactivate Guts
+deactivate Engine
+
+== Farmer Executes Listen ==
+Farmer -> ListenAction : execute(Farmer, Map)
+activate ListenAction
+
+alt Listening to Sellen
+    ListenAction -> Sellen : hasCapability(CAN_PROVIDE_MONOLOGUE)?
+    Sellen --> ListenAction : true
+    ListenAction -> Sellen : getMonologues(Farmer, Map)
+    activate Sellen
+    Sellen --> ListenAction : monologueList
+    deactivate Sellen
+end
+
+alt Listening to Kale
+    ListenAction -> Kale : hasCapability(CAN_PROVIDE_MONOLOGUE)?
+    Kale --> ListenAction : true
+    ListenAction -> Kale : getMonologues(Farmer, Map)
+    activate Kale
+    Kale --> ListenAction : monologueList
+    deactivate Kale
+end
+
+alt Listening to Guts
+    ListenAction -> Guts : hasCapability(CAN_PROVIDE_MONOLOGUE)?
+    Guts --> ListenAction : true
+    ListenAction -> Guts : getMonologues(Farmer, Map)
+    activate Guts
+    Guts --> ListenAction : monologueList
+    deactivate Guts
+end
+
+ListenAction -> Random : nextInt(size)
+activate Random
+Random --> ListenAction : index
+deactivate Random
+
+ListenAction --> Farmer : display(monologueList[index])
+deactivate ListenAction
+
+== Guts' Turn: Attack Behavior ==
+Engine -> Guts : playTurn(actions, lastAction, Map)
+activate Guts
+
+Guts -> Map : locationOf(this)
+activate Map
+Map --> Guts : currentLoc
+deactivate Map
+
+Guts -> Map : getExits()
+activate Map
+Map --> Guts : exits
+deactivate Map
+
+loop for each exit
+    Guts -> Map : getActorAt(destination)
+    activate Map
+    Map --> Guts : target
+    deactivate Map
+    
+    alt target != null && target.getAttribute(HEALTH) > 50
+        Guts -> AttackAction : «create» new AttackAction(target, direction)
+        deactivate Guts
+        
+        AttackAction -> target : execute(Guts, Map)
+        activate AttackAction
+        AttackAction -> Random : nextInt(100)
+        activate Random
+        Random --> AttackAction : hitRoll
+        deactivate Random
+        
+        alt hitRoll < 50
+            AttackAction -> target : hurt(25)
+            AttackAction --> Engine : "Guts hits target for 25 damage"
+        else
+            AttackAction --> Engine : "Guts misses target"
+        end
+        deactivate AttackAction
+        break
+    end
+end
+
+alt no valid target found
+    Guts -> WanderBehaviour : getAction(Guts, Map)
+    activate WanderBehaviour
+    WanderBehaviour --> Guts : moveAction
+    deactivate WanderBehaviour
+    Guts -> DoNothingAction : «create» new DoNothingAction()
+end
+
+Guts --> Engine : return action
+deactivate Guts
+
+@enduml
