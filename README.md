@@ -7,220 +7,89 @@
   MM     ,M   MM     ,M   MM    ,dP' MM     ,M   M     YMM           MM        MM      MM    MM    M     YMM `Mb.     MM  
 .JMMmmmmMMM .JMMmmmmMMM .JMMmmmdP' .JMMmmmmMMM .JML.    YM         .JMML.    .JMML.  .JMML..JMML..JML.    YM   `"bmmmdPY  
 ```
-## LLM-Powered Monolouge NPC
+# Elden Thing
 
-## Feature Story:
+**Elden Thing** is a turn-based, text-driven adventure game where players and non-player characters (NPCs) roam interconnected maps, interact with challenging terrain, and engage in dynamic combat. Inspired by rogue-like adventures, the game features unique terrain mechanics, interactive actors, and a day/night cycle that directly affects gameplay.
 
-In the forgotten of grave, a statues known as the **Ghost of Whispers** stands. Legends speak of its ability to convey riddles and secrets from beyond. Now, through the power of an artificial mind, the Ghost and its variations can speak freely.
+## Table of Contents
 
-When the player approaches and listens, the Ghost creates a response in real time based on the player's inventory or previous actions, for example, if the player has killed creatures, the ghost mentions the whispers of the dead creatures from beyond the grave in the form of riddles.
+- [Overview](#overview)
+- [Features](#features)
+- [Architecture](#architecture)
+- [How to Play](#how-to-play)
+- [Installation & Running](#installation-&-running)
+- [Contributing](#contributing)
+- [License](#license)
 
-Beyond the Ghost, two other LLM powered creatures wander the land:
-1. **The Wandering Poet** who recites freshly composed verses about the player's actions.
-2. **The Seer** who give possible glimpses at the future.
+## Overview
 
-## Design Structure
+_Elden Thing_ builds on a custom-built game engine that supports multiple maps and an array of actors. The system processes every actor every turn, even when off-screen, meaning that the whole game world is always active. The central game loop ticks over maps, actors, and items, making each turn a chance for the world to change.
 
-![UML](docs/design/assignment3/UML/REQ3-(PROPOSAL).png)
+## Features
 
-```plaintext
-Entry Point
-└── Application
+- **Dynamic Turn-Based Gameplay:** Every actor (including the player) has a turn in which they can perform actions, ranging from movement and combat to interacting with items.
+- **Diverse Actor Types:** Play as a protagonist while facing challenging foes and interacting with friendly characters. NPCs such as hostile warriors and non-hostile merchants have their own behaviour logic.
+- **Rich Terrain System:** 
+  - **Ground Types:** From passable floors to impassable walls and special terrain like *BloodroseGround*‑which damages adjacent actors every turn—to interactive elements like *LockedDoor* that force the player to find alternate paths or break them down.
+- **Day/Night and Environmental Effects:** Time managers and controllers adjust the game world (e.g. changing terrain or triggering status effects) as time passes.
+- **Inventory and Items:** Pick up, use, and manage items from seeds to talismans, each with their own functionality.
+- **Modular Architecture:** Designed for extensibility using behaviours for actors and actions that can be combined or chained to create complex moves.
 
-Higher-level class
-└── LLMMonologueManager
+## Architecture
 
-Interface / Abstract classes
-├── LLMDialogueBehaviour
-├── LLMNPCDialogueBehaviour
-├── ActionHistoryProvider
-└── LLMNPC
+The game is structured into several core modules:
 
-NPC Implementations
-├── Ghost
-├── Poet
-└── Seer
+- **Engine Core:**  
+  The engine (found under the `edu.monash.fit2099.engine` package) supports maps, actors, actions, items, and the overall game loop. Key classes include:
+  - [`GameMap`](src/edu/monash/fit2099/engine/positions/GameMap.java): Manages the grid, ticks over its cells and items, and processes environmental effects.
+  - [`World`](src/edu/monash/fit2099/engine/positions/World.java): The central class that holds all game maps and drives the game loop.
+  
+- **Gameplay Components:**  
+  Under the `game` package, the game-specific logic is implemented:
+  - [`Application.java`](src/game/Application.java): The main entry point that sets up maps (such as “Valley of the Inheritree” and “Limveld”), actors, and special items.
+  - Actor implementations such as [`Player.java`](src/edu/monash/fit2099/demo/mars/actors/Player.java) and various NPC classes.
+  - Ground implementations such as [`LockedDoor.java`](src/edu/monash/fit2099/demo/mars/grounds/LockedDoor.java) and [`BloodroseGround.java`](src/game/grounds/BloodroseGround.java) define environmental behaviour.
+  - Special behaviours (e.g. `SpitBehaviour`, `FollowBehaviour`) allow more complex decision-making for NPC actions.
 
-Lower-level classes
-├── PoetBehaviour
-├── SeerBehaviour
-├── GhostBehaviour
-└── LLMDialogueAction
-```
+- **Time & Environmental Effects:**  
+  Classes like `TimeManager` and `TimeController` hook into the game loop to simulate day/night cycles and other time-dependent effects.
 
-## Class Overview
+## How to Play
 
-### Entry Point
-- **Application**
-  - Registers the LLM-powered NPCs (Ghost of Whispers, Wandering Poet, Seer) and attaches their behaviours and dialogue actions.
+Players interact with the game in a text-based console environment. On each turn:
+- The current map is rendered.
+- A list of possible actions is generated based on the player's surroundings, available items, and nearby actors.
+- The player chooses an action (e.g., move, attack, interact), and then the engine processes turns for all other actors, applying status effects and environmental changes.
 
-### Higher-Level Class
-- **LLMMonologueManager**
-    - Encapsulates all interactions with the LLM API using the **geminiCall(prompt)** method. 
-    - Provides a single entry point for requesting dialogues.
+Terrain matters: Some ground types may harm you (Bloodrose sweats nearby actors) or restrict your movement (Locked Doors that require a special action like smashing them with a window). The challenge lies in managing your inventory and planning your moves while the whole world is constantly evolving.
 
-### Interface / Abstract Class
-- **LLMDialogueBehaviour**
-    - Defines the outline for any NPC that wants to use the LLM for monologues. 
-    - Provides methods to constructPrompts() and formatResponses for use by **LLMDialogueAction**.
-    - Extends the **Behaviour** class from engine.
-- **LLMNPCDialogueBehaviour**
-  - Implements **LLMDialogueBehaviour** class to define a common attribute for the **LLMNPC**, **LLMMonologueManager** and **ActionHistoryProvider**, as well as the **getAction()** method.
-- **ActionHistoryProvider**
-  - Abstracts retrieval of the player's past actions to feed into prompts. 
-  - Decouples dialogue behaviours from the concrete Player class.
-- **LLMNPC**
-  - Base class for all LLM-powered NPCs. 
-  - Encapsulates common setup: name, hit points, attaching behaviour and dialogue action.
+## Installation & Running
 
-### NPC Implementations
-1. **PoetBehaviour** 
-   - Crafts prompts as poetic verses based on the player's recent actions, such as attacking or killing creatures, or planting seeds. Implements both **LLMDialogueConstructor** and **Behaviour**
-   - Extends **LLMNPC** and wires up **PoetBehaviour**.
-2. **SeerBehaviour** 
-   - Crafts prompts that may reference actions being performed in the future while also using the context of all the player's previous actions. Implements both **LLMDialogueConstructor** and **Behaviour**
-   - Extends **LLMNPC** and wires up **SeerBehaviour**.
-3. **GhostBehaviour** 
-   - Crafts prompts as riddles talking about the whispers from the creatures beyond the grave as well as referencing the player's previous actions. Implements both **LLMDialogueConstructor** and **Behaviour**
-   - Extends **LLMNPC** and wires up **GhostBehaviour**.
-4. **LLMDialogueAction** when the player selects talk, this action calls **LLMDialogueConstructor's** methods to construct prompts and request dialogues from Gemini, receives the response and passes it to another method to produce a Dialogue Action.
+### Prerequisites
+- Java 21 JDK or above
 
-### Lower-Level Classes
-- **PoetBehaviour**
-  - Crafts prompts as poetic verses based on the player's recent actions. 
-  - Implements both LLMDialogueBehaviour and Behaviour.
-- **SeerBehaviour**
-  - Crafts prompts that reference possible future actions while using full action history.
-  - Implements both LLMDialogueBehaviour and Behaviour.
-- **GhostBehaviour**
-  - Crafts prompts as riddles about the whispers from beyond the grave, referencing past deeds.
-  - Implements both LLMDialogueBehaviour and Behaviour.
-- **LLMDialogueAction**
-  - Extends Action so it integrates with the turn‐based system.
-  - When selected, it calls LLMDialogueBehaviour’s methods to build prompts, invokes the LLM, then formats and displays the response.
+### Running the Game
 
-### Integration with Engine
-- **LLMNPC** extends **Actor** through extending **NPC**, so all health, location and turn logic remain unchanged.
-- **LLMDialogueAction** extends **Action**, making “talk” easy in the existing turn system.
-- Each behaviour **(PoetBehaviour, SeerBehaviour, GhostBehaviour)** implements the engine’s Behaviour interface, through the **LLMDialogueBehaviour** implementation.
+1. **Clone the Repository:**
 
-### Justification (SOLID Principles)
+   ```shell
+   git clone https://github.com/yourusername/elden-thing.git
+   cd elden-thing
+   ```
 
-- **Single Responsibility Principle (SRP)**: Each class has one clear responsibility **LLMMonologueManager** handles only the LLM API calls, **LLMDialogueAction** integrates with the turn system, and each behaviour class constructs its own prompts.
-- **Open/Closed Principle (OCP)**: New NPC behaviours can be added by implementing the **LLMDialogueBehaviour** interface without modifying existing classes, or they can also extend the **LLMNPCDialogueBehaviour** class, which defines attributes to store manager, and also defines a common method to simply return an action. 
-- **Liskov Substitution Principle (LSP)**: Any implementation of **LLMDialogueBehaviour** can replace another easily in the monologue flow.
-- **Interface Segregation Principle (ISP)**: Interfaces like **LLMDialogueBehaviour** and **ActionHistoryProvider** remain lean, so implementers aren’t forced to depend on unused methods.
-- **Dependency Inversion Principle (DIP)**: High-level modules **(LLMMonologueManager, LLMDialogueAction)** depend on abstractions **(LLMDialogueBehaviour, ActionHistoryProvider)** rather than concrete implementations such as the Player class directly.
+2. **Compile the Code:**  
+   If you use an IDE like Visual Studio Code or run from the command line:
+   
+   ```shell
+   javac -d bin src/**/*.java
+   ```
 
-This architecture promotes testability, maintainability, and clarity in LLM-driven dialogue logic.
+3. **Run the Application:**  
 
+   ```shell
+   java -cp bin game.Application
+   ```
 
-### Drawbacks
-- **API Latency & Performance Overhead**, each call of requestDialogue may cause network latency, repeated interactions could cause noticeable delays.
-- **Unpredictable LLM Output**, despite careful prompt engineering, the LLM might generate out‐of‐context lore.
+Alternatively, if you’ve configured a build system like Maven or Gradle, use the corresponding commands to build and run the game.
 
-### Alternatives Considered
-- **Hard‐Coded Dialogue Trees (No LLM)**
-    - Pros 
-      - Zero external dependencies so no latency.
-      - Fully deterministic
-    - Cons
-        - Rapidly becomes unmanageable: every new context requires adding another condition.
-        - Violates OCP: adding new lines forces modification of existing code.
-
-### Future Extensions
-- New LLM powered NPCs such as "Historian" which would involve simply implementing **LMMDialogueConstructor, Behaviour**, and extending NPC for **HistorianBehaviour**.
-- **LLM-Generated Quests or Tasks**, introduce a new interface **LLMQuestBehaviour** implementing **LLMDialogueConstructor** that crafts simple side-quests.
-
-# Day/Night System
-
-## Feature Story:
-
-“When the Sun Sets…”
-In the Lands Between, time does not simply pass—it reshapes the world. With the rising of the sun, the valley awakens with gentle grace. But when the stars crown the skies, creatures mutate, darkness strengthens them, and even the farmer feels fatigue creeping in.
-
-The Lands Between now experience the passage of time. Each game turn represents a tick forward in the world clock. A full day is divided into four time periods: **Morning**, **Afternoon**, **Evening**, and **Night**.
-
-**Day/Night System** with 4 phases:
-- **Morning** – sandstorms push the player 1 tile in a random direction.
-- **Afternoon** – neutral gameplay, standard behavior.
-- **Evening** – certain NPCs begin to become aggressive.
-- **Night** – hostile enemies deal more damage.
-
-These phases rotate every turn, simulating a dynamic passage of time. The system affects enemy stats, player attributes.
-
-
-## Design Structure (Fulfills Provided Diagram)
-
-![UML](docs/design/assignment3/UML/REQ4-(PROPOSAL).png)
-
-```plaintext
-Higher-level class
-└── TimeManager
-
-Interface / Abstract class
-└── TimePhase
-
-Lower-level classes
-├── MorningPhase
-├── EveningPhase
-├── NightPhase
-└── AfternoonPhase
-```
-
-
-## Class Overview
-
-### Higher-level Class
-- **TimeManager:** The central class responsible for advancing the time of day (Morning, Afternoon, Evening, Night) and notifying registered systems of the change.
-
-### Abstract / Interface
-- **TimePhase:** An interface that defines time-based behaviors. It provides methods like applyEffects() and getName().
-
-### Lower-level Class
-- **MorningPhase:** Triggers a sandstorm event that moves the player 1 tile in a random direction.
-- **AfternoonPhase:** A neutral phase with no gameplay changes.
-- **EveningPhase:** Initiates mild changes such as NPCs preparing for hostility.
-- **NightPhase:** Applies major gameplay changes—hostile NPCs gain attack bonuses.
-
-
-## Integration with FIT2099 Engine
-
-- **`TimeManager` uses `GameMap`** to apply time-of-day effects to actors in specific locations.
-- **Each TimePhase** can interact with engine components like `ActorLocations`, `Actions`, or `Behaviours` to simulate environmental and physiological changes.
-
-## Justification (SOLID Principles)
-
-- **Single Responsibility Principle (SRP)**: Each `TimePhase` handles exactly one time-of-day’s logic.
-- **Open/Closed Principle (OCP)**: New phases can be added without modifying `TimeManager`.
-- **Liskov Substitution Principle (LSP)**: Any subclass of `TimePhase` can replace another without failure.
-- **Interface Segregation Principle (ISP)**: TimePhase interface is lean (`applyEffects`, `getName`) and doesn’t bloat implementers.
-- **Interface Segregation Principle (ISP)**: `TimeManager` depends on `TimePhase` abstraction, not specific phases.
-
-This architecture promotes **testability, maintainability, and clarity** in time-specific logic.
-
-
-## Drawbacks
-
-- **Memory/complexity overhead**: Adds multiple classes and updates per tick.
-- **Requires strict phase coordination**: If more game elements are affected (e.g., merchant behavior), every system must subscribe to the time logic.
-- **Visual cues** may be needed to inform players about the current phase.
-
-
-## Alternatives Considered
-
-- **Enum-based TimePhase:** This would have centralized all time logic inside one monolithic enum, breaking SRP and making future extensions harder due to a lack of modularity.
-- **Boolean flags on Actors (e.g., isNightBuff):** This leads to bloated and unmaintainable code, especially when multiple conditions and combinations of time-based effects are introduced.
-- **Representing TimePhase using Status or Capability enums:** This misuses the concept of capabilities, which are meant for actor traits—not global environmental states.
-
-The chosen class/interface-based design is significantly more modular, extensible, and easier to test.
-
-
-## Future Extensions
-
-- **Add a Blood Moon phase:** Simply create a new class like BloodMoonPhase that implements TimePhase, and inject it into the cycle.
-- **Weather system integration:** Define a new interface like WeatherCondition and chain its logic through TimeManager alongside the time phases.
-- **Time-based merchant inventory:** Within merchant logic, include a condition like if TimeManager.getCurrentPhase() shows its NightPhase to serve special items.
-- **Random events during phases:** Trigger world events such as enemy invasions or meteor showers by overriding applyEffects(GameMap) in a specific TimePhase.
-
-This design keeps the system open for new features without needing to change any of the existing logic, maintaining clean separation and adhering to OCP (Open/Closed Principle).
+Enjoy!!
