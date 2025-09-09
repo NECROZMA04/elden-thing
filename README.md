@@ -92,8 +92,4 @@ Terrain matters: Some ground types may harm you (Bloodrose sweats nearby actors)
 
 Alternatively, if you’ve configured a build system like Maven or Gradle, use the corresponding commands to build and run the game.
 
-## Contributing
-
-Contributions are welcome! Please fork the repository and submit your pull requests for any new features, bug fixes, or improvements. Follow the existing project structure and coding style.
-
 Enjoy!!
